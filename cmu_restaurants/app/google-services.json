@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "629197132604",
+    "project_id": "cmu-recurso-9ce75",
+    "storage_bucket": "cmu-recurso-9ce75.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:629197132604:android:97e922efec9a68416e4439",
+        "android_client_info": {
+          "package_name": "pt.ipp.estg.cmu_restaurants"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCeKm_K2AlaOCP8aT0eN5I7dkCW6nxenKs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
