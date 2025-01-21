@@ -20,5 +20,6 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "cmu_restaurants"
+rootProject.buildFileName = "build.gradle.kts"
 include(":app")
  
