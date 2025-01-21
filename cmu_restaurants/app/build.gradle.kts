@@ -7,12 +7,12 @@ plugins {
 
 android {
     namespace = "pt.ipp.estg.cmu_restaurants"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "pt.ipp.estg.cmu_restaurants"
         minSdk = 28
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -53,6 +53,7 @@ android {
 
 dependencies {
     val nav_version = "2.8.5"
+    val room_version = "2.6.1"
 
     //firebase
     implementation(platform("com.google.firebase:firebase-bom:33.8.0"))
@@ -64,6 +65,18 @@ dependencies {
     implementation("androidx.navigation:navigation-ui:$nav_version")
     implementation("androidx.navigation:navigation-dynamic-features-fragment:$nav_version")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+    //room
+    implementation("androidx.room:room-runtime:$room_version")
+    annotationProcessor("androidx.room:room-compiler:$room_version")
+    //coil
+    implementation("io.coil-kt.coil3:coil-compose:3.0.4")
+    implementation("io.coil-kt.coil3:coil-network-okhttp:3.0.4")
+    //retrofit
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    //mapbox
+    implementation("com.mapbox.maps:android:11.9.1")
+    implementation("com.mapbox.extension:maps-compose:11.9.1")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
