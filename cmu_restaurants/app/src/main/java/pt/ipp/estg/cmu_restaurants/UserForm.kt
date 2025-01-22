@@ -11,12 +11,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.font.FontWeight
 import androidx.navigation.NavController
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.widget.Toast
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -27,6 +28,10 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
 import pt.ipp.estg.cmu_restaurants.Models.User
+import pt.ipp.estg.cmu_restaurants.Room.getUserByEmail
+import pt.ipp.estg.cmu_restaurants.Room.getUserByPhoneNumber
+import pt.ipp.estg.cmu_restaurants.Room.insertUser
+import kotlin.math.log
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -137,13 +142,14 @@ fun UserForm(navController: NavController, context: Context) {
                         }
 
                         val firebaseAuth = FirebaseAuth.getInstance()
+
                         firebaseAuth.createUserWithEmailAndPassword(email, password)
                             .addOnCompleteListener { task ->
                                 if (task.isSuccessful) {
                                     val currentUser = firebaseAuth.currentUser
 
                                     val userId = currentUser?.uid
-                                    if(userId != null) {
+                                    if (userId != null) {
                                         val db = Firebase.firestore
 
                                         val newUser = User(
@@ -152,49 +158,34 @@ fun UserForm(navController: NavController, context: Context) {
                                             phoneNumber = phoneNumber,
                                             password = password
                                         )
-
-                                        saveUser(newUser, db, context)
+                                        CoroutineScope(Dispatchers.IO).launch {
+                                            try {
+                                                saveUser(newUser, db, context, navController)
+                                            } catch (e: Exception) {
+                                                // Rollback Firebase Authentication user if something fails
+                                                currentUser.delete()
+                                                    .addOnCompleteListener { rollbackTask ->
+                                                        if (rollbackTask.isSuccessful) {
+                                                            Handler(Looper.getMainLooper()).post {
+                                                                Toast.makeText(
+                                                                    context,
+                                                                    "Registration failed: ${e.message}",
+                                                                    Toast.LENGTH_LONG
+                                                                ).show()
+                                                            }
+                                                        }
+                                                    }
+                                            }
+                                        }
                                     }
                                 } else {
-                                    Toast.makeText(context, "Registration failed: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(
+                                        context,
+                                        "Registration failed: ${task.exception?.message}",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
                             }
-
-//                        val existingUserByEmail = getUserByEmail(context, email)
-//                        if (existingUserByEmail != null) {
-//                            Toast.makeText(context, "Email already in use.", Toast.LENGTH_SHORT)
-//                                .show()
-//                            return@Button
-//                        }
-//
-//                        val existingUserByPhone =
-//                            getUserByPhoneNumber(context, phoneNumber)
-//                        if (existingUserByPhone != null) {
-//                            Toast.makeText(
-//                                context,
-//                                "Phone number already in use.",
-//                                Toast.LENGTH_SHORT
-//                            ).show()
-//                            return@Button
-//                        }
-//
-//                        val user = User(
-//                            name = name,
-//                            email = email,
-//                            phoneNumber = phoneNumber,
-//                            password = password
-//                        )
-//                        insertUser(context, user)
-//                        val insertedUser = getUserByEmail(context, email)
-//                        message = if (insertedUser != null) ({
-//                            "User inserted successfully!"
-//                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                        navController.navigate("login")
-//                        }).toString() else ({
-//                            message = "Failed to insert user."
-//                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-//                        }).toString()
-//                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -215,25 +206,52 @@ fun UserForm(navController: NavController, context: Context) {
     )
 }
 
-fun saveUser(user: User, db: FirebaseFirestore, context: Context) = CoroutineScope(Dispatchers.IO).launch {
-    try{
-        val newUser = FirebaseAuth.getInstance().currentUser
-        val uid = newUser?.uid ?: throw IllegalStateException("User not authenticated")
+fun saveUser(user: User, db: FirebaseFirestore, context: Context, navController: NavController) =
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            val newUser = FirebaseAuth.getInstance().currentUser
+            val uid = newUser?.uid ?: throw IllegalStateException("User not authenticated")
 
-        val userData = hashMapOf(
-            "name" to user.name,
-            "email" to user.email,
-            "phoneNumber" to user.phoneNumber,
-            "password" to user.password
-        )
+            val userData = hashMapOf(
+                "name" to user.name,
+                "email" to user.email,
+                "phoneNumber" to user.phoneNumber,
+                "password" to user.password
+            )
 
-        db.collection("users").document(uid).set(userData).await()
-        withContext(Dispatchers.Main){
-            Toast.makeText(context, "User Saved Successfuly", Toast.LENGTH_LONG).show()
-        }
-    }catch(e: Exception){
-        withContext(Dispatchers.Main){
-            Toast.makeText(context, e.message, Toast.LENGTH_LONG).show()
+            db.collection("users").document(uid).set(userData).await()
+
+            saveUserRoomDB(user, context)
+
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "User Saved Successfuly", Toast.LENGTH_LONG).show()
+                navController.navigate("login")
+            }
+        } catch (e: Exception) {
+            val newUser = FirebaseAuth.getInstance().currentUser
+            val uid = newUser?.uid
+            if (uid != null) {
+                db.collection("users").document(uid).delete().await()
+            }
+
+            withContext(Dispatchers.Main) {
+                Log.println(Log.DEBUG,"Log", e.message.toString());
+                Toast.makeText(context, "${e.message}", Toast.LENGTH_LONG)
+                    .show()
+            }
         }
     }
+
+fun saveUserRoomDB(user: User, context: Context) {
+    val existingUserByEmail = getUserByEmail(context, user.email)
+    if (existingUserByEmail != null) {
+        throw IllegalStateException("Email already in use.")
+    }
+
+    val existingUserByPhone = getUserByPhoneNumber(context, user.phoneNumber)
+    if (existingUserByPhone != null) {
+        throw IllegalStateException("Phone number already in use.")
+    }
+
+    insertUser(context, user)
 }

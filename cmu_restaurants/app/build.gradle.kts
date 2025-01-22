@@ -2,12 +2,17 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.google.gms.google.services)
-    kotlin("plugin.serialization") version "2.0.21"
+    kotlin("kapt")
+    id("androidx.room")
 }
 
 android {
     namespace = "pt.ipp.estg.cmu_restaurants"
     compileSdk = 35
+
+    room {
+        schemaDirectory("$projectDir/schemas")
+    }
 
     defaultConfig {
         applicationId = "pt.ipp.estg.cmu_restaurants"
@@ -67,7 +72,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     //room
     implementation("androidx.room:room-runtime:$room_version")
-    annotationProcessor("androidx.room:room-compiler:$room_version")
+    implementation("androidx.room:room-ktx:$room_version")
+    kapt("androidx.room:room-compiler:$room_version")
+
     //coil
     implementation("io.coil-kt.coil3:coil-compose:3.0.4")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.0.4")
