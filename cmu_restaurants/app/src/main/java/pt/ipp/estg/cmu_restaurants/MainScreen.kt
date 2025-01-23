@@ -32,6 +32,7 @@ import androidx.navigation.compose.rememberNavController
 import pt.ipp.estg.cmu_restaurants.Models.AuthViewModel
 import pt.ipp.estg.cmu_restaurants.UserForm
 import pt.ipp.estg.cmu_restaurants.UserProfile
+import pt.ipp.estg.cmu_restaurants.UserReviews
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,12 +51,13 @@ fun MainScreen() {
             val userId = backStackEntry.arguments?.getString("userId")
             UserProfile(userId = userId, onUpdateClick = {})
         }
-//        composable("tripHistory/{userId}") { backStackEntry ->
-//            val userIdString = backStackEntry.arguments?.getString("userId")
-//            val userId = userIdString?.toIntOrNull() ?: -1
-//            val tripDao = DatabaseProvider.getDatabase(context).tripDao()
-//            TripHistoryScreen(navController = navController, userId = userId, tripDao = tripDao)
-//        }
+        composable("reviews/{userId}") { backStackEntry ->
+            //val userIdString = backStackEntry.arguments?.getString("userId")
+            val userId = backStackEntry.arguments?.getString("userId")
+            //val userId = userIdString?.toIntOrNull() ?: -1
+            //val tripDao = DatabaseProvider.getDatabase(context).tripDao()
+            UserReviews(navController = navController, userId = userId)
+        }
     }
 }
 

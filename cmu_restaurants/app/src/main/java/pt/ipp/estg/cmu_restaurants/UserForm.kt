@@ -28,10 +28,10 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
 import pt.ipp.estg.cmu_restaurants.Models.User
+import pt.ipp.estg.cmu_restaurants.Room.clearUserTable
 import pt.ipp.estg.cmu_restaurants.Room.getUserByEmail
 import pt.ipp.estg.cmu_restaurants.Room.getUserByPhoneNumber
 import pt.ipp.estg.cmu_restaurants.Room.insertUser
-import kotlin.math.log
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -152,7 +152,12 @@ fun UserForm(navController: NavController, context: Context) {
                                     if (userId != null) {
                                         val db = Firebase.firestore
 
-                                        val newUser = User(
+                                        val newUser = FirebaseAuth.getInstance().currentUser
+                                        val uid = newUser?.uid
+                                            ?: throw IllegalStateException("User not authenticated")
+
+                                        val user = User(
+                                            userId = uid,
                                             name = name,
                                             email = email,
                                             phoneNumber = phoneNumber,
@@ -160,9 +165,8 @@ fun UserForm(navController: NavController, context: Context) {
                                         )
                                         CoroutineScope(Dispatchers.IO).launch {
                                             try {
-                                                saveUser(newUser, db, context, navController)
+                                                saveUser(user, db, context, navController)
                                             } catch (e: Exception) {
-                                                // Rollback Firebase Authentication user if something fails
                                                 currentUser.delete()
                                                     .addOnCompleteListener { rollbackTask ->
                                                         if (rollbackTask.isSuccessful) {
@@ -195,6 +199,20 @@ fun UserForm(navController: NavController, context: Context) {
                     Text(text = "Submit", color = Color.White)
                 }
 
+                Button(
+                    onClick = {
+                        CoroutineScope(Dispatchers.IO).launch {
+                            clearUserTable(context)
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE94D9B))
+                ) {
+                    Text(text = "Clear Table", color = Color.White)
+                }
+
                 Text(
                     text = message,
                     color = Color.White,
@@ -209,8 +227,6 @@ fun UserForm(navController: NavController, context: Context) {
 fun saveUser(user: User, db: FirebaseFirestore, context: Context, navController: NavController) =
     CoroutineScope(Dispatchers.IO).launch {
         try {
-            val newUser = FirebaseAuth.getInstance().currentUser
-            val uid = newUser?.uid ?: throw IllegalStateException("User not authenticated")
 
             val userData = hashMapOf(
                 "name" to user.name,
@@ -219,7 +235,7 @@ fun saveUser(user: User, db: FirebaseFirestore, context: Context, navController:
                 "password" to user.password
             )
 
-            db.collection("users").document(uid).set(userData).await()
+            db.collection("users").document(user.userId).set(userData).await()
 
             saveUserRoomDB(user, context)
 
@@ -235,7 +251,7 @@ fun saveUser(user: User, db: FirebaseFirestore, context: Context, navController:
             }
 
             withContext(Dispatchers.Main) {
-                Log.println(Log.DEBUG,"Log", e.message.toString());
+                Log.println(Log.DEBUG, "Log", e.message.toString());
                 Toast.makeText(context, "${e.message}", Toast.LENGTH_LONG)
                     .show()
             }

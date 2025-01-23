@@ -15,8 +15,11 @@ interface UserDao {
     suspend fun getUserByEmail(email: String): User?
 
     @Query("SELECT * FROM users WHERE userId = :id LIMIT 1")
-    suspend fun getUserById(id: Int): User?
+    suspend fun getUserById(id: String): User?
 
     @Query("SELECT * FROM users WHERE phoneNumber = :phoneNumber LIMIT 1")
     fun getUserByPhoneNumber(phoneNumber: Int): User?
+
+    @Query("DELETE FROM users")
+    suspend fun clearTable()
 }

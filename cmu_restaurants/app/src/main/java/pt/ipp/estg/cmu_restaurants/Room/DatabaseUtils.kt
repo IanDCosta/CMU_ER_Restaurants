@@ -2,6 +2,7 @@ package pt.ipp.estg.cmu_restaurants.Room
 
 import android.content.Context
 import kotlinx.coroutines.runBlocking
+import pt.ipp.estg.cmu_restaurants.Models.Review
 import pt.ipp.estg.cmu_restaurants.Models.User
 
 //user stuff
@@ -24,7 +25,7 @@ fun getUserByPhoneNumber(context: Context, phoneNumber: Int): User? {
     return db.userDao().getUserByPhoneNumber(phoneNumber)
 }
 
-fun getUserById(context: Context, id: Int): User? {
+fun getUserById(context: Context, id: String): User? {
     val db = DatabaseProvider.getDatabase(context)
     return runBlocking {
         db.userDao().getUserById(id)
@@ -36,5 +37,27 @@ fun validateUser(context: Context, email: String, password: String): Boolean {
     return runBlocking {
         val user = db.userDao().getUserByEmail(email)
         user?.password == password
+    }
+}
+
+suspend fun clearUserTable(context: Context) {
+    val db = DatabaseProvider.getDatabase(context)
+    return runBlocking {
+        db.userDao().clearTable()
+    }
+}
+
+//review stuff
+suspend fun insertReview(context: Context, review: Review) {
+    val db = DatabaseProvider.getDatabase(context)
+    runBlocking {
+        db.reviewDao().insert(review)
+    }
+}
+
+suspend fun getReviewsByUserId(context: Context, userId: String?): List<Review> {
+    val db = DatabaseProvider.getDatabase(context)
+    return runBlocking {
+        db.reviewDao().getReviewsByUserId(userId)
     }
 }

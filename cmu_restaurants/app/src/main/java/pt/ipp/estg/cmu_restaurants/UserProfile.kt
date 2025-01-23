@@ -54,7 +54,6 @@ fun UserProfile(userId: String?, onUpdateClick: () -> Unit) {
     var phoneNumber by remember { mutableStateOf("") }
     var profilePictureUri by remember { mutableStateOf<Uri?>(null) }
 
-    // URI para armazenar temporariamente a imagem capturada
     val tempPhotoUri = remember {
         FileProvider.getUriForFile(
             context,
@@ -249,7 +248,7 @@ fun UserProfile(userId: String?, onUpdateClick: () -> Unit) {
             }
 
             Text(
-                text = "HopOn©",
+                text = "XPTO©",
                 color = Color(0xFFE91E63),
                 fontSize = 12.sp,
                 textAlign = TextAlign.Center,
@@ -264,7 +263,6 @@ fun showNotification(context: Context, message: String) {
     val channelName = "Profile Update Notifications"
     val notificationId = 1
 
-    // Criar o canal de notificação (necessário para API 26+)
     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
         val channel = NotificationChannel(
             channelId,
@@ -278,16 +276,14 @@ fun showNotification(context: Context, message: String) {
         notificationManager.createNotificationChannel(channel)
     }
 
-    // Criar a notificação
     val notification = NotificationCompat.Builder(context, channelId)
-        .setSmallIcon(android.R.drawable.ic_dialog_info) // Pode personalizar com ícones próprios
+        .setSmallIcon(android.R.drawable.ic_dialog_info)
         .setContentTitle("Profile Update")
         .setContentText(message)
         .setPriority(NotificationCompat.PRIORITY_DEFAULT)
         .setAutoCancel(true)
         .build()
 
-    // Exibir a notificação
     with(NotificationManagerCompat.from(context)) {
         if (ActivityCompat.checkSelfPermission(
                 context,

@@ -72,6 +72,8 @@ fun MapScreen(navController: NavController, userId: String?) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         content = {
+            ButtonBar(navController = navController, userId = userId)
+
             MapboxMap(
                 modifier = Modifier.fillMaxSize(),
                 mapViewportState = mapViewportState,
@@ -92,34 +94,9 @@ fun MapScreen(navController: NavController, userId: String?) {
 }
 
 @Composable
-fun SearchBar(query: String, onQueryChanged: (String) -> Unit, onSearchClicked: (String) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        TextField(
-            value = query,
-            onValueChange = onQueryChanged,
-            modifier = Modifier.weight(1f),
-            placeholder = { Text(text = "Enter an address") }
-        )
-        Button(
-            onClick = { onSearchClicked(query) },
-            modifier = Modifier.padding(start = 8.dp)
-        ) {
-            Text(text = "Search")
-        }
-    }
-}
-
-
-@Composable
 fun ButtonBar(
     navController: NavController,
     userId: String?,
-    mapboxMapState: MutableState<MapboxMap?>
 ) {
     Column(
         modifier = Modifier
@@ -133,64 +110,11 @@ fun ButtonBar(
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             Button(onClick = { navController.navigate("userProfile/$userId") }) {
-                Text(text = "Check Profile")
+                Text(text = "Profile")
             }
-            Button(onClick = { navController.navigate("tripHistory/$userId") }) {
-                Text(text = "Trips")
+            Button(onClick = { navController.navigate("reviews/$userId") }) {
+                Text(text = "Your Reviews")
             }
         }
     }
 }
-
-private fun geocodeAddress(context: Context, address: String, onResult: (LatLng) -> Unit) {
-    val retrofit = Retrofit.Builder()
-        .baseUrl("https://api.mapbox.com/")
-        .addConverterFactory(GsonConverterFactory.create())
-        .build()
-
-    val geocodingApi = retrofit.create(MapboxGeocodingApi::class.java)
-    CoroutineScope(Dispatchers.IO).launch {
-        try {
-            val response = geocodingApi.geocodeAddress(
-                address = address,
-                accessToken = "sk.eyJ1IjoiZ2F5YmlydTA4IiwiYSI6ImNtM2VvNTBodDBneXcybnF4cXdrMTVpM3EifQ.Qa2Kk4UxskMS5qj0maENCg"
-            )
-            if (response.isSuccessful) {
-                val feature = response.body()?.features?.firstOrNull()
-                feature?.geometry?.coordinates?.let {
-//                    val latLng = LatLng(it)
-//                    withContext(Dispatchers.Main) {
-//                        onResult(latLng)
-//                    }
-                }
-            } else {
-                Log.e("Geocode", "Failed to geocode address: ${response.errorBody()?.string()}")
-            }
-        } catch (e: Exception) {
-            Log.e("Geocode", "Error: ${e.message}")
-        }
-    }
-}
-
-//private fun enableLocationComponent(context: Context, style: Style, mapboxMap: MapboxMap) {
-//    val locationComponent = mapboxMap.locationComponent
-//    locationComponent.activateLocationComponent(
-//        LocationComponentActivationOptions.builder(context, style).build()
-//    )
-//
-//    if (ActivityCompat.checkSelfPermission(
-//            context,
-//            Manifest.permission.ACCESS_FINE_LOCATION
-//        ) != PackageManager.PERMISSION_GRANTED &&
-//        ActivityCompat.checkSelfPermission(
-//            context,
-//            Manifest.permission.ACCESS_COARSE_LOCATION
-//        ) != PackageManager.PERMISSION_GRANTED
-//    ) {
-//        return
-//    }
-//
-//    locationComponent.isLocationComponentEnabled = true
-//    locationComponent.cameraMode = CameraMode.TRACKING
-//    locationComponent.renderMode = RenderMode.COMPASS
-//}
