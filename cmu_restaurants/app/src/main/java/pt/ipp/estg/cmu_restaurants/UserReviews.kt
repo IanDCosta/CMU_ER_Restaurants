@@ -1,9 +1,7 @@
 package pt.ipp.estg.cmu_restaurants
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -66,8 +64,8 @@ fun UserReviews(navController: NavController, userId: String?){
                 LazyColumn {
                     items(reviews){review ->
                         Text("Review ID: ${review.reviewId}\n" +
-                                "Stars: ${review.stars}/5\n" +
-                                "Review: ${review.review}")
+                                "Rating: ${review.rating}/5\n" +
+                                "Comment: ${review.comment}")
                     }
                 }
             }
