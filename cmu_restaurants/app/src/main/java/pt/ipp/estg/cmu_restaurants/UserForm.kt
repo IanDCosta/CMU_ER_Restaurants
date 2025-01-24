@@ -28,22 +28,22 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
 import pt.ipp.estg.cmu_restaurants.Models.User
-import pt.ipp.estg.cmu_restaurants.Room.clearUserTable
 import pt.ipp.estg.cmu_restaurants.Room.getUserByEmail
 import pt.ipp.estg.cmu_restaurants.Room.getUserByPhoneNumber
 import pt.ipp.estg.cmu_restaurants.Room.insertUser
+import pt.ipp.estg.cmu_restaurants.ui.theme.customAccent
+import pt.ipp.estg.cmu_restaurants.ui.theme.customBackground
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserForm(navController: NavController, context: Context) {
-    val backgroundColor = Color(0xFF3C0A3D)
-    val accentColor = Color(0xFFE94D9B)
-    val textColor = Color.White
     val colors = TextFieldDefaults.outlinedTextFieldColors(
-        focusedLabelColor = accentColor,
-        unfocusedLabelColor = Color.Gray,
-        focusedBorderColor = accentColor,
-        unfocusedBorderColor = Color.Gray,
+        focusedLabelColor = MaterialTheme.colorScheme.onPrimary,
+        unfocusedLabelColor = MaterialTheme.colorScheme.onSecondary,
+        focusedBorderColor = MaterialTheme.colorScheme.primary,
+        unfocusedBorderColor = MaterialTheme.colorScheme.secondary,
+        focusedTextColor = MaterialTheme.colorScheme.onPrimary,
+        unfocusedTextColor = MaterialTheme.colorScheme.onPrimary
     )
 
     var name by remember { mutableStateOf("") }
@@ -56,12 +56,12 @@ fun UserForm(navController: NavController, context: Context) {
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = backgroundColor,
-        contentColor = textColor,
+        containerColor = MaterialTheme.colorScheme.customBackground,
+        contentColor = MaterialTheme.colorScheme.customAccent,
         topBar = {
             TopAppBar(
-                title = { Text("User Profile", color = Color.White) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF3C0A3D))
+                title = { Text("User Profile", color = MaterialTheme.colorScheme.customAccent) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.secondary)
             )
         },
         content = { paddingValues ->
@@ -75,7 +75,7 @@ fun UserForm(navController: NavController, context: Context) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Name", color = textColor) },
+                    label = { Text("Name", color = MaterialTheme.colorScheme.customAccent) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp),
@@ -85,7 +85,7 @@ fun UserForm(navController: NavController, context: Context) {
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
-                    label = { Text("Email", color = textColor) },
+                    label = { Text("Email", color = MaterialTheme.colorScheme.customAccent) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp),
@@ -103,7 +103,7 @@ fun UserForm(navController: NavController, context: Context) {
                             phoneError = true
                         }
                     },
-                    label = { Text("Phone Number", color = textColor) },
+                    label = { Text("Phone Number", color = MaterialTheme.colorScheme.customAccent) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp),
@@ -114,7 +114,7 @@ fun UserForm(navController: NavController, context: Context) {
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Password", color = textColor) },
+                    label = { Text("Password", color = MaterialTheme.colorScheme.customAccent) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp),
@@ -194,23 +194,9 @@ fun UserForm(navController: NavController, context: Context) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE94D9B))
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                 ) {
                     Text(text = "Submit", color = Color.White)
-                }
-
-                Button(
-                    onClick = {
-                        CoroutineScope(Dispatchers.IO).launch {
-                            clearUserTable(context)
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE94D9B))
-                ) {
-                    Text(text = "Clear Table", color = Color.White)
                 }
 
                 Text(

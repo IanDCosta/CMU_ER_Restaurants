@@ -18,8 +18,9 @@ import androidx.room.PrimaryKey
     indices = [Index(value = ["userId"])]
 )
 data class Review(
-    @PrimaryKey val reviewId: String,
+    @PrimaryKey(autoGenerate = true) val reviewId: Int = 0,
     val userId: String,
+    val restaurantName: String,
     val rating: Int,
     val comment: String
 )

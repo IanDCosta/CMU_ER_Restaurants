@@ -1,4 +1,4 @@
-package pt.ipp.estg.cmu_restaurants.Models
+package pt.ipp.estg.cmu_restaurants.Firebase
 
 
 import android.util.Log
@@ -8,6 +8,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import pt.ipp.estg.cmu_restaurants.Models.User
 
 class AuthViewModel : ViewModel() {
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()

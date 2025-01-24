@@ -11,7 +11,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -28,6 +27,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
@@ -37,13 +37,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.rememberAsyncImagePainter
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
-import pt.ipp.estg.cmu_restaurants.Models.AuthViewModel
+import pt.ipp.estg.cmu_restaurants.Firebase.AuthViewModel
 import pt.ipp.estg.cmu_restaurants.Models.User
 import java.io.File
 import java.io.FileOutputStream
 
 @Composable
-fun UserProfile(userId: String?, onUpdateClick: () -> Unit) {
+fun UserProfile(userId: String?) {
     val context = LocalContext.current
     val authViewModel = viewModel(AuthViewModel::class.java)
     var language by remember { mutableStateOf("en") }
@@ -71,13 +71,13 @@ fun UserProfile(userId: String?, onUpdateClick: () -> Unit) {
         }
     }
 
-    // Update strings dynamically
     val nameLabel = if (language == "pt") "Nome" else "Name"
     val emailLabel = if (language == "pt") "Email" else "Email"
     val phoneLabel = if (language == "pt") "Número de Telefone" else "Phone Number"
     val updateInfoText = if (language == "pt") "Atualizar Informações" else "Update Information"
     val userNotFoundText = if (language == "pt") "Usuário não encontrado" else "User not found"
-    val updateSuccessText = if (language == "pt") "Atualização bem-sucedida" else "Update Successful"
+    val updateSuccessText =
+        if (language == "pt") "Atualização bem-sucedida" else "Update Successful"
     val updateFailedText = if (language == "pt") "Atualização falhou" else "Update Failed"
 
     LaunchedEffect(userId) {
@@ -107,12 +107,12 @@ fun UserProfile(userId: String?, onUpdateClick: () -> Unit) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.White),
+                .background(MaterialTheme.colorScheme.background),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = userNotFoundText,
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onPrimary,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -120,8 +120,9 @@ fun UserProfile(userId: String?, onUpdateClick: () -> Unit) {
     } else {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+                .fillMaxSize()
+                .padding(16.dp)
+                .background(MaterialTheme.colorScheme.background),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Button(onClick = {
@@ -136,7 +137,7 @@ fun UserProfile(userId: String?, onUpdateClick: () -> Unit) {
                 modifier = Modifier
                     .size(120.dp)
                     .clip(CircleShape)
-                    .background(Color.Gray)
+                    .background(MaterialTheme.colorScheme.secondary)
                     .clickable {
                         cameraLauncher.launch(tempPhotoUri)
                     },
@@ -150,7 +151,7 @@ fun UserProfile(userId: String?, onUpdateClick: () -> Unit) {
                     )
                 } ?: Text(
                     text = "+",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.primary,
                     fontSize = 40.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -160,7 +161,7 @@ fun UserProfile(userId: String?, onUpdateClick: () -> Unit) {
                 text = name,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFFE91E63),
+                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 16.dp)
             )
 
@@ -201,7 +202,8 @@ fun UserProfile(userId: String?, onUpdateClick: () -> Unit) {
 
                     profilePictureUri?.let {
                         try {
-                            val profilePictureFile = File(context.filesDir, "profile_picture_${userId}.jpg")
+                            val profilePictureFile =
+                                File(context.filesDir, "profile_picture_${userId}.jpg")
                             context.contentResolver.openInputStream(it)?.use { inputStream ->
                                 FileOutputStream(profilePictureFile).use { outputStream ->
                                     inputStream.copyTo(outputStream)
@@ -209,13 +211,22 @@ fun UserProfile(userId: String?, onUpdateClick: () -> Unit) {
                             }
 
                             updatedUser?.let {
-                                val userWithPhoto = it.copy(profilePicture = profilePictureFile.absolutePath)
+                                val userWithPhoto =
+                                    it.copy(profilePicture = profilePictureFile.absolutePath)
                                 authViewModel.updateUser(userId!!, userWithPhoto) { success ->
                                     if (success) {
                                         showNotification(context, updateSuccessText)
-                                        Toast.makeText(context, updateSuccessText, Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(
+                                            context,
+                                            updateSuccessText,
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     } else {
-                                        Toast.makeText(context, updateFailedText, Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(
+                                            context,
+                                            updateFailedText,
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     }
                                 }
                             }
@@ -227,7 +238,8 @@ fun UserProfile(userId: String?, onUpdateClick: () -> Unit) {
                         authViewModel.updateUser(userId!!, it) { success ->
                             if (success) {
                                 showNotification(context, updateSuccessText)
-                                Toast.makeText(context, updateSuccessText, Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, updateSuccessText, Toast.LENGTH_SHORT)
+                                    .show()
                             } else {
                                 Toast.makeText(context, updateFailedText, Toast.LENGTH_SHORT).show()
                             }
@@ -241,7 +253,7 @@ fun UserProfile(userId: String?, onUpdateClick: () -> Unit) {
             ) {
                 Text(
                     text = updateInfoText,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onPrimary,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -249,7 +261,7 @@ fun UserProfile(userId: String?, onUpdateClick: () -> Unit) {
 
             Text(
                 text = "XPTO©",
-                color = Color(0xFFE91E63),
+                color = MaterialTheme.colorScheme.secondary,
                 fontSize = 12.sp,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 16.dp)

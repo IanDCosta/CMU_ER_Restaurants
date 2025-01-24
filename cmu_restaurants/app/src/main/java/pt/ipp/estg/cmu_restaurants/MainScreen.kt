@@ -29,12 +29,13 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import pt.ipp.estg.cmu_restaurants.Models.AuthViewModel
+import pt.ipp.estg.cmu_restaurants.Firebase.AuthViewModel
+import pt.ipp.estg.cmu_restaurants.RestaurantProfile
+import pt.ipp.estg.cmu_restaurants.ReviewForm
 import pt.ipp.estg.cmu_restaurants.UserForm
 import pt.ipp.estg.cmu_restaurants.UserProfile
 import pt.ipp.estg.cmu_restaurants.UserReviews
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
@@ -49,13 +50,18 @@ fun MainScreen() {
         }
         composable("userProfile/{userId}") { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId")
-            UserProfile(userId = userId, onUpdateClick = {})
+            UserProfile(userId = userId)
+        }
+        composable("reviewForm/{restaurantName}") { backStackEntry ->
+            val restaurantName = backStackEntry.arguments?.getString("restaurantName")
+            ReviewForm(restaurantName = restaurantName, context)
+        }
+        composable("restaurantProfile/{restaurantName}") { backStackEntry ->
+            val restaurantName = backStackEntry.arguments?.getString("restaurantName")
+            RestaurantProfile(navController = navController, restaurantName = restaurantName)
         }
         composable("reviews/{userId}") { backStackEntry ->
-            //val userIdString = backStackEntry.arguments?.getString("userId")
             val userId = backStackEntry.arguments?.getString("userId")
-            //val userId = userIdString?.toIntOrNull() ?: -1
-            //val tripDao = DatabaseProvider.getDatabase(context).tripDao()
             UserReviews(navController = navController, userId = userId)
         }
     }
@@ -64,21 +70,24 @@ fun MainScreen() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(navController: NavController) {
-    val backgroundColor = Color(0xFF3C0A3D)
-    val accentColor = Color(0xFFE94D9B)
-    val textColor = Color.White
+    val colors = TextFieldDefaults.outlinedTextFieldColors(
+        focusedLabelColor = MaterialTheme.colorScheme.onPrimary,
+        unfocusedLabelColor = MaterialTheme.colorScheme.onSecondary,
+        focusedBorderColor = MaterialTheme.colorScheme.primary,
+        unfocusedBorderColor = MaterialTheme.colorScheme.secondary,
+        focusedTextColor = MaterialTheme.colorScheme.onPrimary,
+        unfocusedTextColor = MaterialTheme.colorScheme.onPrimary
+    )
 
     val emailText = rememberSaveable { mutableStateOf("") }
     val passwordText = rememberSaveable { mutableStateOf("") }
     val context = LocalContext.current
-    var message by remember { mutableStateOf("") }
 
     val authViewModel: AuthViewModel = viewModel()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = backgroundColor,
-        contentColor = textColor
+        containerColor = Color.White,
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -91,7 +100,7 @@ fun LoginScreen(navController: NavController) {
 
             Text(
                 text = "Login",
-                color = textColor,
+                color = MaterialTheme.colorScheme.onPrimary,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -101,16 +110,11 @@ fun LoginScreen(navController: NavController) {
             OutlinedTextField(
                 value = emailText.value,
                 onValueChange = { emailText.value = it },
-                label = { Text("Your Email", color = textColor) },
+                label = { Text("Your Email", color = MaterialTheme.colorScheme.onPrimary) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedLabelColor = accentColor,
-                    unfocusedLabelColor = Color.Gray,
-                    focusedBorderColor = accentColor,
-                    unfocusedBorderColor = Color.Gray,
-                )
+                colors = colors
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -118,17 +122,11 @@ fun LoginScreen(navController: NavController) {
             OutlinedTextField(
                 value = passwordText.value,
                 onValueChange = { passwordText.value = it },
-                label = { Text("Your Password", color = textColor) },
+                label = { Text("Your Password", color = MaterialTheme.colorScheme.onPrimary) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedTextColor = textColor,
-                    focusedLabelColor = accentColor,
-                    unfocusedLabelColor = Color.Gray,
-                    focusedBorderColor = accentColor,
-                    unfocusedBorderColor = Color.Gray,
-                ),
+                colors = colors,
                 visualTransformation = PasswordVisualTransformation()
             )
 
@@ -150,8 +148,8 @@ fun LoginScreen(navController: NavController) {
 
                     authViewModel.login(email, password) { success, userId ->
                         if (success) {
-                                navController.navigate("map/$userId")
-                                showNotification(context, "Login Successful")
+                            navController.navigate("map/$userId")
+                            showNotification(context, "Login Successful")
                         } else {
                             Toast.makeText(
                                 context,
@@ -161,58 +159,19 @@ fun LoginScreen(navController: NavController) {
                         }
                     }
                 },
-//                    val isValidUser = validateUser(context, emailText.value, passwordText.value)
-//                    if (isValidUser) {
-//                        val user = getUserByEmail(context, emailText.value)
-//                        if (user != null) {
-//                            val userId = user.userId
-//                            Log.d("LoginScreen", "Retrieved userId: $userId")
-//                            navController.navigate("map/$userId")
-//                            Toast.makeText(context, "Login Successful", Toast.LENGTH_SHORT).show()
-//                        } else {
-//                            Toast.makeText(context, "User not found.", Toast.LENGTH_SHORT).show()
-//                        }
-//                    } else {
-//                        val isValidDriver =
-//                            validateDriver(context, emailText.value, passwordText.value)
-//                        if (isValidDriver) {
-//                            val driver = getDriverByEmail(context, emailText.value)
-//                            if (driver != null) {
-//                                val driverId = driver.driverId
-//                                Log.d("LoginScreen", "Retrieved driverId: $driverId")
-//                                navController.navigate("map/$driverId")
-//                                Toast.makeText(
-//                                    context,
-//                                    "Driver Login Successful",
-//                                    Toast.LENGTH_SHORT
-//                                ).show()
-//                            } else {
-//                                Toast.makeText(context, "Driver not found.", Toast.LENGTH_SHORT)
-//                                    .show()
-//                            }
-//                        } else {
-//                            // Neither User nor Driver matched
-//                            Toast.makeText(
-//                                context,
-//                                "Invalid email or password.",
-//                                Toast.LENGTH_SHORT
-//                            ).show()
-//                        }
-//                    }
-//                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = accentColor)
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
             ) {
-                Text(text = "Log In", color = textColor)
+                Text(text = "Log In", color = MaterialTheme.colorScheme.onPrimary)
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = "I Forgot my Password",
-                color = accentColor,
+                color = MaterialTheme.colorScheme.secondary,
                 fontSize = 14.sp,
                 modifier = Modifier.clickable { }
             )
@@ -221,13 +180,13 @@ fun LoginScreen(navController: NavController) {
 
             Text(
                 text = "Don't have an account?",
-                color = textColor,
+                color = MaterialTheme.colorScheme.secondary,
                 fontSize = 14.sp
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "Register",
-                color = accentColor,
+                color = MaterialTheme.colorScheme.primary,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.clickable { navController.navigate("userForm") }
@@ -237,135 +196,8 @@ fun LoginScreen(navController: NavController) {
 
             Text(
                 text = "XPTO©",
-                color = accentColor,
+                color = MaterialTheme.colorScheme.secondary,
                 fontSize = 12.sp
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun RegisterScreen(navController: NavController) {
-    val backgroundColor = Color(0xFF3C0A3D)
-    val accentColor = Color(0xFFE94D9B)
-    val textColor = Color.White
-
-    val emailText = rememberSaveable { mutableStateOf("") }
-    val passwordText = rememberSaveable { mutableStateOf("") }
-    val context = LocalContext.current
-
-    val authViewModel: AuthViewModel = viewModel()
-
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = backgroundColor,
-        contentColor = textColor
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "Register Here",
-                color = accentColor,
-                fontSize = 36.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            OutlinedTextField(
-                value = emailText.value,
-                onValueChange = { emailText.value = it },
-                label = { Text("Your Email", color = textColor) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedLabelColor = accentColor,
-                    unfocusedLabelColor = Color.Gray,
-                    focusedBorderColor = accentColor,
-                    unfocusedBorderColor = Color.Gray,
-                )
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = passwordText.value,
-                onValueChange = { passwordText.value = it },
-                label = { Text("Your Password", color = textColor) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedTextColor = textColor,
-                    focusedLabelColor = accentColor,
-                    unfocusedLabelColor = Color.Gray,
-                    focusedBorderColor = accentColor,
-                    unfocusedBorderColor = Color.Gray,
-                ),
-                visualTransformation = PasswordVisualTransformation()
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = {
-                    val email = emailText.value
-                    val password = passwordText.value
-
-                    if (email.isBlank() || password.isBlank()) {
-                        Toast.makeText(
-                            context,
-                            "Email and password cannot be empty.",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        return@Button
-                    }
-
-                    authViewModel.register(email, password) { success ->
-                        if (success) {
-                            Toast.makeText(context, "Registration Successful", Toast.LENGTH_SHORT)
-                                .show()
-                            navController.navigate("login")
-                        } else {
-                            Toast.makeText(
-                                context,
-                                "Registration Failed. Try again.",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = accentColor)
-            ) {
-                Text(text = "Register", color = textColor)
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "Already have an account?",
-                color = textColor,
-                fontSize = 14.sp
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Log In",
-                color = accentColor,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.clickable { navController.navigate("login") }
             )
         }
     }

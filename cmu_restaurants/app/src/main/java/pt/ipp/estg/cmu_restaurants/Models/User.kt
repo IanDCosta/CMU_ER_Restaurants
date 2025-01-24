@@ -11,4 +11,6 @@ data class User(
     val phoneNumber: Int,
     val password: String,
     val profilePicture: String? = "null"
-)
+){
+    constructor() : this("","","",0,"",null)
+}

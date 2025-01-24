@@ -1,12 +1,8 @@
 import Models.Geoapify.GeoapifyPlacesResponse
 import Models.Geoapify.GeoapifyService
 import Models.Geoapify.PlaceProperties
-import android.Manifest
 import android.annotation.SuppressLint
-import android.content.Context
-import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
-import android.os.Bundle
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,42 +11,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SearchBar
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.app.ActivityCompat
 import androidx.navigation.NavController
-import com.google.type.LatLng
 import com.mapbox.geojson.Point
-import com.mapbox.geojson.LineString
-import com.mapbox.geojson.utils.PolylineUtils
-import com.mapbox.maps.CameraOptions
-import com.mapbox.maps.MapView
-import com.mapbox.maps.MapboxMap
-import com.mapbox.maps.extension.compose.DisposableMapEffect
 import com.mapbox.maps.extension.compose.MapEffect
 import com.mapbox.maps.extension.compose.MapboxMap
 import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
-import com.mapbox.maps.extension.style.layers.addLayer
-import com.mapbox.maps.extension.style.layers.generated.LineLayer
-import com.mapbox.maps.extension.style.sources.addSource
-import com.mapbox.maps.extension.style.sources.generated.GeoJsonSource
-import com.mapbox.maps.plugin.Plugin
 import com.mapbox.maps.plugin.PuckBearing
 import com.mapbox.maps.plugin.annotation.annotations
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
@@ -59,15 +33,10 @@ import com.mapbox.maps.plugin.gestures.OnMapClickListener
 import com.mapbox.maps.plugin.gestures.gestures
 import com.mapbox.maps.plugin.locationcomponent.createDefault2DPuck
 import com.mapbox.maps.plugin.locationcomponent.location
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import pt.ipp.estg.cmu_restaurants.Models.MapboxGeocodingApi
+
 import retrofit2.Call
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.Response
 import pt.ipp.estg.cmu_restaurants.R
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -91,7 +60,8 @@ fun MapScreen(navController: NavController, userId: String?) {
                 RestaurantSidebar(
                     restaurants = nearbyRestaurants.value,
                     onSelectRestaurant = { restaurant ->
-                        println("Selected restaurant: ${restaurant.name}")
+                        navController.navigate("restaurantProfile/${restaurant.name}")
+                        Log.println(Log.DEBUG,"Log","Selected restaurant: ${restaurant.name}")
                     }
                 )
             }
@@ -207,7 +177,8 @@ fun ButtonBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(16.dp)
+            .background(MaterialTheme.colorScheme.primary),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -234,21 +205,33 @@ fun RestaurantSidebar(
         modifier = Modifier
             .width(200.dp)
             .fillMaxHeight()
-            .background(Color.Magenta)
+            .background(MaterialTheme.colorScheme.background)
             .padding(8.dp)
     ) {
         Text("Nearby Restaurants", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(8.dp))
         restaurants.forEach { restaurant ->
-            val restaurantName = restaurant.name ?: "Unknown Restaurant"
-            Text(
-                text = restaurantName,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onSelectRestaurant(restaurant) }
-                    .padding(8.dp),
-                style = MaterialTheme.typography.bodyMedium
-            )
+            val restaurantName = restaurant.name
+            if (restaurantName != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp)
+                        .padding(vertical = 8.dp)
+                        .background(MaterialTheme.colorScheme.primary),
+                    contentAlignment = Alignment.Center
+                ){
+                    Text(
+                        text = restaurantName,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelectRestaurant(restaurant) }
+                            .padding(8.dp),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+            }
         }
     }
 }
