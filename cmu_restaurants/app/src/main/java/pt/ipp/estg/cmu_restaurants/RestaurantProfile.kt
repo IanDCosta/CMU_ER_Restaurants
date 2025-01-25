@@ -19,26 +19,34 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
+import pt.ipp.estg.cmu_restaurants.Firebase.getRestaurantById
 import pt.ipp.estg.cmu_restaurants.Firebase.getReviewsByRestaurantNameFromFirestore
+import pt.ipp.estg.cmu_restaurants.Models.Restaurant
 import pt.ipp.estg.cmu_restaurants.Models.Review
+import pt.ipp.estg.cmu_restaurants.Models.User
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RestaurantProfile(navController: NavController, restaurantName: String?) {
+fun RestaurantProfile(navController: NavController, restaurantId: String?) {
     val reviews = remember { mutableStateListOf<Review>() }
     val coroutineScope = rememberCoroutineScope()
+    var restaurant by remember { mutableStateOf<Restaurant?>(null) }
 
-    LaunchedEffect(restaurantName) {
+    LaunchedEffect(restaurantId) {
         coroutineScope.launch {
+            getRestaurantById(restaurantId.toString()) { fetchedRestaurant ->  restaurant = fetchedRestaurant}
             val restaurantReviews =
-                getReviewsByRestaurantNameFromFirestore(restaurantName.toString())
+                getReviewsByRestaurantNameFromFirestore(restaurantId.toString())
             reviews.addAll(restaurantReviews)
         }
     }
@@ -46,7 +54,7 @@ fun RestaurantProfile(navController: NavController, restaurantName: String?) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("${restaurantName}'s Reviews") },
+                title = { Text("${restaurant?.restaurantName}'s Reviews") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -76,7 +84,7 @@ fun RestaurantProfile(navController: NavController, restaurantName: String?) {
             }
             Button(
                 onClick = {
-                    navController.navigate("reviewForm/$restaurantName")
+                    navController.navigate("reviewForm/$restaurantId")
                 },
                 modifier = Modifier
                     .fillMaxWidth()

@@ -84,6 +84,7 @@ dependencies {
     implementation("com.mapbox.maps:android:11.9.1")
     implementation("com.mapbox.extension:maps-compose:11.9.1")
 
+    implementation("androidx.compose.material:material-icons-extended:1.5.1")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

@@ -38,6 +38,7 @@ import coil3.compose.rememberAsyncImagePainter
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import pt.ipp.estg.cmu_restaurants.Firebase.AuthViewModel
+import pt.ipp.estg.cmu_restaurants.Firebase.getUserById
 import pt.ipp.estg.cmu_restaurants.Models.User
 import java.io.File
 import java.io.FileOutputStream
@@ -62,7 +63,6 @@ fun UserProfile(userId: String?) {
         )
     }
 
-    // Launcher para capturar foto com a câmera
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
@@ -82,7 +82,14 @@ fun UserProfile(userId: String?) {
 
     LaunchedEffect(userId) {
         if (userId != null) {
-            val docRef = firestore.collection("users").document(userId)
+            getUserById(userId) { fetchedUser ->
+                user = fetchedUser
+                name = fetchedUser.name ?: ""
+                email = fetchedUser.email ?: ""
+                phoneNumber = fetchedUser.phoneNumber?.toString() ?: ""
+                profilePictureUri = fetchedUser.profilePicture?.let { Uri.parse(it) }
+            }
+            /*val docRef = firestore.collection("users").document(userId)
             docRef.get()
                 .addOnSuccessListener { document ->
                     if (document != null && document.exists()) {
@@ -99,7 +106,7 @@ fun UserProfile(userId: String?) {
                 }
                 .addOnFailureListener { exception ->
                     Log.d(TAG, "get failed with ", exception)
-                }
+                }*/
         }
     }
 

@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import java.util.UUID
 
 @Entity(
     tableName = "reviews",
@@ -18,9 +19,12 @@ import androidx.room.PrimaryKey
     indices = [Index(value = ["userId"])]
 )
 data class Review(
-    @PrimaryKey(autoGenerate = true) val reviewId: Int = 0,
+    @PrimaryKey val reviewId: String = UUID.randomUUID().toString(),
     val userId: String,
+    val restaurantId: String,
+    val userName: String,
     val restaurantName: String,
     val rating: Int,
-    val comment: String
+    val comment: String,
+    val picture: String? = "null"
 )

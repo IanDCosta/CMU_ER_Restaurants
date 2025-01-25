@@ -4,14 +4,22 @@ import Models.Geoapify.PlaceProperties
 import android.content.Context
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -29,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
@@ -45,7 +54,7 @@ import pt.ipp.estg.cmu_restaurants.ui.theme.customBackground
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReviewForm(restaurantName: String?, context: Context) {
+fun ReviewForm(navController: NavController, restaurantName: String?, context: Context) {
     val colors = TextFieldDefaults.outlinedTextFieldColors(
         focusedLabelColor = MaterialTheme.colorScheme.primary,
         unfocusedLabelColor = MaterialTheme.colorScheme.secondary,
@@ -76,26 +85,9 @@ fun ReviewForm(restaurantName: String?, context: Context) {
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                OutlinedTextField(
-                    value = rating.toString(),
-                    onValueChange = {
-                        if (it.all { char -> char.isDigit() }) {
-                            rating = it.toInt()
-                            ratingError = false
-                        } else {
-                            ratingError = true
-                        }
-                    },
-                    label = {
-                        Text(
-                            "Rating (1 to 5)",
-                            color = MaterialTheme.colorScheme.customAccent
-                        )
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    colors = colors,
+                RatingSelector(
+                    rating = rating,
+                    onRatingChange = { rating = it }
                 )
 
                 OutlinedTextField(
@@ -130,12 +122,16 @@ fun ReviewForm(restaurantName: String?, context: Context) {
 
                         val review = Review(
                             userId = uid,
+                            restaurantId = "",
+                            userName = newUser.displayName.toString(),
                             restaurantName = restaurantName.toString(),
                             rating = rating,
                             comment = comment
                         )
 
-                        saveReview(review, db, context)
+                        saveReview(review, db, context) {
+                            navController.popBackStack()
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -149,24 +145,53 @@ fun ReviewForm(restaurantName: String?, context: Context) {
     )
 }
 
-fun saveReview(review: Review, db: FirebaseFirestore, context: Context) =
-    CoroutineScope(Dispatchers.IO).launch {
-    try{
-        val reviewData = hashMapOf(
-            "reviewId" to review.reviewId,
-            "userId" to review.userId,
-            "restaurantName" to review.restaurantName,
-            "rating" to review.rating,
-            "comment" to review.comment
-        )
-
-        db.collection("reviews").document().set(reviewData).await()
-
-    }catch(e: Exception){
-        withContext(Dispatchers.Main) {
-            Log.println(Log.DEBUG, "Log", e.message.toString());
-            Toast.makeText(context, "${e.message}", Toast.LENGTH_LONG)
-                .show()
+@Composable
+fun RatingSelector(
+    rating: Int,
+    onRatingChange: (Int) -> Unit
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.padding(vertical = 8.dp)
+    ) {
+        for (i in 1..5) {
+            Icon(
+                imageVector = if (i <= rating) Icons.Default.Star else Icons.Default.StarBorder,
+                contentDescription = "Rating $i",
+                tint = if (i <= rating) MaterialTheme.colorScheme.primary else Color.Gray,
+                modifier = Modifier
+                    .size(32.dp)
+                    .clickable { onRatingChange(i) }
+            )
         }
     }
 }
+
+
+fun saveReview(review: Review, db: FirebaseFirestore, context: Context, onSuccess: () -> Unit) =
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            val reviewData = hashMapOf(
+                "userId" to review.userId,
+                "restaurantId" to review.restaurantId,
+                "userName" to review.userName,
+                "restaurantName" to review.restaurantName,
+                "rating" to review.rating,
+                "comment" to review.comment,
+                "picture" to review.picture
+            )
+
+            db.collection("reviews").document(review.reviewId).set(reviewData).await()
+
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "Review submitted successfully.", Toast.LENGTH_SHORT).show()
+                onSuccess()
+            }
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) {
+                Log.println(Log.DEBUG, "Log", e.message.toString());
+                Toast.makeText(context, "${e.message}", Toast.LENGTH_LONG)
+                    .show()
+            }
+        }
+    }

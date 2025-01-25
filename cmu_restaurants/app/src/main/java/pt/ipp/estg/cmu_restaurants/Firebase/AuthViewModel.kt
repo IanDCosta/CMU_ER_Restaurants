@@ -21,44 +21,41 @@ class AuthViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             try {
-                // Attempt to sign in
                 val result = auth.signInWithEmailAndPassword(email, password).await()
                 val user = result.user
                 if (user != null) {
                     val userId = user.uid
                     println("User logged in successfully: $userId")
 
-                    //search in firestore
                     val userDocument = firestore.collection("users").document(userId).get().await()
 
                     if (userDocument != null) {
-                        onResult(true, userId) // Found in "users"
+                        onResult(true, userId)
                     }
                 } else {
                     println("Login failed: user is null")
-                    onResult(false, null) // Login failed
+                    onResult(false, null)
                 }
             } catch (e: Exception) {
                 println("Error during login: ${e.message}")
                 e.printStackTrace()
-                onResult(false, null) // Error occurred
+                onResult(false, null)
             }
         }
     }
 
-    // Função para registro
     fun register(email: String, password: String, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
             try {
                 val result = auth.createUserWithEmailAndPassword(email, password).await()
                 if (result != null && result.user != null) {
-                    onResult(true) // Registro bem-sucedido
+                    onResult(true)
                 } else {
-                    onResult(false) // Falha no registro
+                    onResult(false)
                 }
             } catch (e: Exception) {
                 Log.e("Auth", e.message+"")
-                onResult(false) // Erro no registro
+                onResult(false)
             }
         }
     }
@@ -67,10 +64,10 @@ class AuthViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 firestore.collection("users").document(userId).set(updatedUser).await()
-                onResult(true) // Atualização bem-sucedida
+                onResult(true)
             } catch (e: Exception) {
                 Log.e("Auth", e.message+"")
-                onResult(false) // Erro na atualização
+                onResult(false)
             }
         }
     }

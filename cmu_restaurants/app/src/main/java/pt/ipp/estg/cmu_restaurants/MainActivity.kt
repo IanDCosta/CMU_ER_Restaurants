@@ -58,9 +58,7 @@ class MainActivity : ComponentActivity(), PermissionsListener {
 
         setContent {
             Cmu_restaurantsTheme {
-                Surface(color = MaterialTheme.colorScheme.background) {
-                    MainScreen()
-                }
+                MainScreen()
             }
         }
     }
@@ -76,7 +74,11 @@ class MainActivity : ComponentActivity(), PermissionsListener {
 
     override fun onExplanationNeeded(permissionsToExplain: List<String>) {
         // Provide explanation to the user (e.g., Toast or Dialog)
-        Toast.makeText(this, "Location permission is needed to show your location.", Toast.LENGTH_LONG).show()
+        Toast.makeText(
+            this,
+            "Location permission is needed to show your location.",
+            Toast.LENGTH_LONG
+        ).show()
     }
 
     override fun onPermissionResult(granted: Boolean) {
@@ -103,7 +105,8 @@ private fun restoreNormalModeAdjustments() {
 }
 
 private fun showPowerSaveModeNotification(context: Context) {
-    val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    val notificationManager =
+        context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     val notificationId = 1
     val channelId = "power_save_mode_channel"
 

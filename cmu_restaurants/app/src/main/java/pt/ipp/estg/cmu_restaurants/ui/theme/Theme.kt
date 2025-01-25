@@ -9,12 +9,12 @@ import androidx.compose.ui.platform.LocalContext
 
 // Define your custom colors
 val BackgroundColor = Color.White
-val Primary = Color.Blue
-val Secondary = Color(0xFF02CCFE)
+val Primary = Color(0xFFA50000)
+val Secondary = Color(0xFFFF6363)
 val TextColor = Color.Black
 val UnfocusedColor = Color.LightGray
 
-private val DarkColorScheme = darkColorScheme(
+private val LightColorScheme = lightColorScheme(
     primary = Primary,
     secondary = Secondary,
     tertiary = UnfocusedColor,
@@ -24,7 +24,7 @@ private val DarkColorScheme = darkColorScheme(
     surface = BackgroundColor
 )
 
-private val LightColorScheme = lightColorScheme(
+private val DarkColorScheme = darkColorScheme(
     primary = Primary,
     secondary = Secondary,
     tertiary = UnfocusedColor,
@@ -47,7 +47,7 @@ fun Cmu_restaurantsTheme(
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
+    /*val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
@@ -55,10 +55,10 @@ fun Cmu_restaurantsTheme(
 
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
-    }
+    }*/
 
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = LightColorScheme,
         typography = Typography,
         content = content
     )

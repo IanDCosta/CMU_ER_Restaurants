@@ -2,15 +2,19 @@ import Models.Geoapify.GeoapifyPlacesResponse
 import Models.Geoapify.GeoapifyService
 import Models.Geoapify.PlaceProperties
 import android.annotation.SuppressLint
+import android.content.Context
 import android.graphics.BitmapFactory
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.google.firebase.firestore.FirebaseFirestore
 import com.mapbox.geojson.Point
 import com.mapbox.maps.extension.compose.MapEffect
 import com.mapbox.maps.extension.compose.MapboxMap
@@ -33,6 +38,12 @@ import com.mapbox.maps.plugin.gestures.OnMapClickListener
 import com.mapbox.maps.plugin.gestures.gestures
 import com.mapbox.maps.plugin.locationcomponent.createDefault2DPuck
 import com.mapbox.maps.plugin.locationcomponent.location
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import pt.ipp.estg.cmu_restaurants.Models.Restaurant
 
 import retrofit2.Call
 import retrofit2.Retrofit
@@ -52,7 +63,11 @@ fun MapScreen(navController: NavController, userId: String?) {
         .build()
     val geoapifyService = retrofit.create(GeoapifyService::class.java)
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.primary)
+    ) {
         ButtonBar(navController = navController, userId = userId)
 
         Row(modifier = Modifier.fillMaxSize()) {
@@ -60,8 +75,8 @@ fun MapScreen(navController: NavController, userId: String?) {
                 RestaurantSidebar(
                     restaurants = nearbyRestaurants.value,
                     onSelectRestaurant = { restaurant ->
-                        navController.navigate("restaurantProfile/${restaurant.name}")
-                        Log.println(Log.DEBUG,"Log","Selected restaurant: ${restaurant.name}")
+                        findRestaurantByDetails(restaurant, navController)
+                        Log.println(Log.DEBUG, "Log", "Selected restaurant: ${restaurant}")
                     }
                 )
             }
@@ -169,6 +184,64 @@ fun fetchNearbyRestaurants(
     })
 }
 
+fun findRestaurantByDetails(
+    place: PlaceProperties,
+    navController: NavController
+) = CoroutineScope(Dispatchers.IO).launch {
+    val db = FirebaseFirestore.getInstance()
+    var restaurant: Restaurant
+    restaurant = Restaurant()
+
+    db.collection("restaurants")
+        .whereEqualTo("address", place.formatted)
+        .whereEqualTo("lat", place.lat)
+        .whereEqualTo("lon", place.lon)
+        .get()
+        .addOnSuccessListener { querySnapshot ->
+            if (!querySnapshot.isEmpty) {
+                val document = querySnapshot.documents.first()
+                restaurant =
+                    document.toObject(Restaurant::class.java)!!
+            } else {
+                restaurant = Restaurant(
+                    restaurantName = place.name.toString(),
+                    rating = 5.0,
+                    address = place.formatted.toString(),
+                    lat = place.lat,
+                    lon = place.lon,
+                )
+                saveRestaurant(restaurant, db)
+            }
+        }
+        .addOnFailureListener { exception ->
+            exception.printStackTrace()
+        }
+    withContext(Dispatchers.Main) {
+        navController.navigate("restaurantProfile/${restaurant.restaurantId}")
+    }
+}
+
+fun saveRestaurant(restaurant: Restaurant, db: FirebaseFirestore) =
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            val restaurantData = hashMapOf(
+                "restaurantId" to restaurant.restaurantId,
+                "restaurantName" to restaurant.restaurantName,
+                "rating" to restaurant.rating,
+                "address" to restaurant.address,
+                "lat" to restaurant.lat,
+                "lon" to restaurant.lon
+            )
+
+            db.collection("restaurants").document(restaurant.restaurantId).set(restaurantData)
+                .await()
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) {
+                Log.println(Log.DEBUG, "Log", e.message.toString());
+            }
+        }
+    }
+
 @Composable
 fun ButtonBar(
     navController: NavController,
@@ -177,8 +250,7 @@ fun ButtonBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
-            .background(MaterialTheme.colorScheme.primary),
+            .padding(16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -186,10 +258,16 @@ fun ButtonBar(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            Button(onClick = { navController.navigate("userProfile/$userId") }) {
+            Button(
+                onClick = { navController.navigate("userProfile/$userId") },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+            ) {
                 Text(text = "Profile")
             }
-            Button(onClick = { navController.navigate("reviews/$userId") }) {
+            Button(
+                onClick = { navController.navigate("reviews/$userId") },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+            ) {
                 Text(text = "Your Reviews")
             }
         }
@@ -208,7 +286,11 @@ fun RestaurantSidebar(
             .background(MaterialTheme.colorScheme.background)
             .padding(8.dp)
     ) {
-        Text("Nearby Restaurants", style = MaterialTheme.typography.headlineMedium)
+        Text(
+            "Restaurants",
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.headlineMedium
+        )
         Spacer(modifier = Modifier.height(8.dp))
         restaurants.forEach { restaurant ->
             val restaurantName = restaurant.name
@@ -218,11 +300,15 @@ fun RestaurantSidebar(
                         .fillMaxWidth()
                         .height(100.dp)
                         .padding(vertical = 8.dp)
-                        .background(MaterialTheme.colorScheme.primary),
+                        .background(
+                            color = MaterialTheme.colorScheme.secondary,
+                            shape = RoundedCornerShape(16.dp)
+                        ),
                     contentAlignment = Alignment.Center
-                ){
+                ) {
                     Text(
                         text = restaurantName,
+                        color = MaterialTheme.colorScheme.background,
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onSelectRestaurant(restaurant) }
