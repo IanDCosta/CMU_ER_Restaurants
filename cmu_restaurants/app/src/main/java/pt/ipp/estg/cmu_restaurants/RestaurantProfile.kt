@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,8 +33,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 import pt.ipp.estg.cmu_restaurants.Firebase.getRestaurantById
 import pt.ipp.estg.cmu_restaurants.Firebase.getReviewsByRestaurantIdFromFirestore
@@ -121,6 +124,21 @@ fun RestaurantProfile(navController: NavController, restaurantId: String?) {
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
+                            review.picture?.let {
+                                Box(
+                                    modifier = Modifier
+                                        .size(200.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                ) {
+                                    AsyncImage(
+                                        model = it,
+                                        contentDescription = "Captured Photo",
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(RoundedCornerShape(8.dp))
+                                    )
+                                }
+                            }
                             Text(
                                 text = "User: ${review.userName}\n" +
                                         "Rating: ${(review.rating).toInt()}/5\n" +

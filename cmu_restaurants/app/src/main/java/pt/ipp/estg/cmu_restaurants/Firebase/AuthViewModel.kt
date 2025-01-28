@@ -44,22 +44,6 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    fun register(email: String, password: String, onResult: (Boolean) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val result = auth.createUserWithEmailAndPassword(email, password).await()
-                if (result != null && result.user != null) {
-                    onResult(true)
-                } else {
-                    onResult(false)
-                }
-            } catch (e: Exception) {
-                Log.e("Auth", e.message+"")
-                onResult(false)
-            }
-        }
-    }
-
     fun updateUser(userId: String, updatedUser: User, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
             try {

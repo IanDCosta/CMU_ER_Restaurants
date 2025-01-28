@@ -144,19 +144,22 @@ class RestaurantNotificationService : Service() {
 
     @SuppressLint("ForegroundServiceType")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(1, createNotification())
+        startForeground(1, createDummyNotification())
         Log.d("RestaurantService", "Service started")
         return START_STICKY
     }
 
-    private fun createNotification(): Notification {
+
+    private fun createDummyNotification(): Notification {
         val channelId = "restaurant_service_channel"
         createNotificationChannel(channelId, "Restaurant Service", NotificationManager.IMPORTANCE_LOW)
 
         return NotificationCompat.Builder(this, channelId)
-            .setContentTitle("Restaurant Service Running")
-            .setContentText("Tracking nearby restaurants...")
+            .setContentTitle("")
+            .setContentText("")
             .setSmallIcon(R.drawable.restaurant_icon)
+            .setPriority(NotificationCompat.PRIORITY_MIN)
+            .setVisibility(NotificationCompat.VISIBILITY_SECRET)
             .build()
     }
 

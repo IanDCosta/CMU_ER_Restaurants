@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.draw.clip
 import android.Manifest
+import android.content.ContentValues.TAG
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.util.Log
@@ -34,6 +35,7 @@ import pt.ipp.estg.cmu_restaurants.Firebase.AuthViewModel
 import pt.ipp.estg.cmu_restaurants.Firebase.getUserById
 import pt.ipp.estg.cmu_restaurants.Models.User
 import java.io.File
+import java.io.FileOutputStream
 
 @Composable
 fun UserProfile(userId: String?) {
@@ -87,7 +89,6 @@ fun UserProfile(userId: String?) {
     }
 
     val nameLabel = if (language == "pt") "Nome" else "Name"
-    val emailLabel = if (language == "pt") "Email" else "Email"
     val phoneLabel = if (language == "pt") "Número de Telefone" else "Phone Number"
     val updateInfoText = if (language == "pt") "Atualizar Informações" else "Update Information"
     val userNotFoundText = if (language == "pt") "Usuário não encontrado" else "User not found"
@@ -104,20 +105,6 @@ fun UserProfile(userId: String?) {
                 email = fetchedUser.email
                 phoneNumber = fetchedUser.phoneNumber.toString()
                 profilePictureUri = fetchedUser.profilePicture?.let { Uri.parse(it) }
-
-                /*val base64Image = fetchedUser.profilePicture
-                if (!base64Image.isNullOrEmpty()) {
-                    try {
-                        val decodedBytes = Base64.decode(base64Image, Base64.DEFAULT)
-                        val bitmap =
-                            BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
-                        profilePictureUri = BitmapToUri(context, bitmap)
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error decoding image", e)
-                    }
-                } else {
-                    profilePictureUri = null
-                }*/
             }
         }
     }
@@ -246,36 +233,48 @@ fun UserProfile(userId: String?) {
                         phoneNumber = phoneNumber
                     )
 
-                    /*profilePictureUri?.let { uri ->
-                        val base64Image = convertImageToBase64(context, uri)
-                        if (base64Image != null) {
-                            saveImageToFirestore(userId!!, base64Image) { success ->
-                                if (success) {
-                                    Toast.makeText(
-                                        context,
-                                        "Profile picture saved successfully!",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                } else {
-                                    Toast.makeText(
-                                        context,
-                                        "Failed to save profile picture",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
+                    profilePictureUri?.let {
+                        try {
+                            val profilePictureFile =
+                                File(context.filesDir, "profile_picture_${userId}.jpg")
+                            context.contentResolver.openInputStream(it)?.use { inputStream ->
+                                FileOutputStream(profilePictureFile).use { outputStream ->
+                                    inputStream.copyTo(outputStream)
                                 }
                             }
-                        } else {
-                            Toast.makeText(context, "Failed to convert image", Toast.LENGTH_SHORT)
-                                .show()
-                        }
-                    }*/
 
-                    authViewModel.updateUser(userId!!, updatedUser!!) { success ->
-                        if (success) {
-                            Toast.makeText(context, updateSuccessText, Toast.LENGTH_SHORT)
-                                .show()
-                        } else {
+                            updatedUser?.let {
+                                val userWithPhoto =
+                                    it.copy(profilePicture = profilePictureFile.absolutePath)
+                                authViewModel.updateUser(userId!!, userWithPhoto) { success ->
+                                    if (success) {
+                                        Toast.makeText(
+                                            context,
+                                            updateSuccessText,
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            updateFailedText,
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
                             Toast.makeText(context, updateFailedText, Toast.LENGTH_SHORT).show()
+                            Log.e(TAG, "Error saving profile picture: ", e)
+                        }
+                    } ?: updatedUser?.let {
+
+                        authViewModel.updateUser(userId!!, updatedUser!!) { success ->
+                            if (success) {
+                                Toast.makeText(context, updateSuccessText, Toast.LENGTH_SHORT)
+                                    .show()
+                            } else {
+                                Toast.makeText(context, updateFailedText, Toast.LENGTH_SHORT).show()
+                            }
                         }
                     }
                 },
@@ -302,59 +301,3 @@ fun UserProfile(userId: String?) {
         }
     }
 }
-
-/*
-fun convertImageToBase64(context: Context, uri: Uri): String? {
-    return try {
-        if (uri == null) {
-            Log.e("convertImageToBase64", "Uri is null")
-            return null
-        }
-
-        val inputStream = context.contentResolver.openInputStream(uri)
-        val bitmap = BitmapFactory.decodeStream(inputStream)
-        inputStream?.close()
-
-        // Resize the bitmap to 500x500
-        val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 500, 500, false)
-
-        // Convert the resized bitmap to a Base64 string
-        val outputStream = ByteArrayOutputStream()
-        resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
-        val byteArray = outputStream.toByteArray()
-        Base64.encodeToString(byteArray, Base64.DEFAULT)
-    } catch (e: Exception) {
-        e.printStackTrace()
-        Log.e("convertImageToBase64", "Error converting image: ${e.message}")
-        null
-    }
-}
-
-fun saveImageToFirestore(userId: String, base64Image: String?, onComplete: (Boolean) -> Unit) {
-    if (base64Image == null) {
-        Log.e("saveImageToFirestore", "Base64 image is null, skipping save")
-        onComplete(false)
-        return
-    }
-
-    val firestore = FirebaseFirestore.getInstance()
-    firestore.collection("users").document(userId)
-        .update("profilePicture", base64Image)
-        .addOnSuccessListener {
-            Log.d("saveImageToFirestore", "Profile picture saved successfully")
-            onComplete(true)
-        }
-        .addOnFailureListener { e ->
-            Log.e("saveImageToFirestore", "Failed to save profile picture: ${e.message}")
-            onComplete(false)
-        }
-}
-
-fun BitmapToUri(context: Context, bitmap: Bitmap): Uri {
-    val file = File(context.cacheDir, "temp_image.jpg")
-    val outputStream = FileOutputStream(file)
-    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-    outputStream.close()
-    return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-}
-*/

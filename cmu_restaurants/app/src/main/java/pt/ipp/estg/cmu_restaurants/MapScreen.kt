@@ -2,6 +2,7 @@ import Models.Geoapify.GeoapifyPlacesResponse
 import Models.Geoapify.GeoapifyService
 import Models.Geoapify.PlaceProperties
 import android.annotation.SuppressLint
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
 import androidx.compose.foundation.background
@@ -96,9 +97,23 @@ fun MapScreen(navController: NavController, userId: String?) {
                     mapViewportState.transitionToFollowPuckState()
 
                     mapView.getMapboxMap().getStyle { style ->
-                        val bitmap =
+                        // Load the original marker images
+                        val bitmap1 =
                             BitmapFactory.decodeResource(context.resources, R.drawable.red_marker)
-                        style.addImage("red_marker", bitmap)
+                        val bitmap2 = BitmapFactory.decodeResource(
+                            context.resources,
+                            R.drawable.restaurant_icon
+                        )
+
+                        // Resize both bitmaps to make them smaller
+                        val scaledBitmap1 =
+                            Bitmap.createScaledBitmap(bitmap1, 50, 50, false)  // Scale to 50x50
+                        val scaledBitmap2 =
+                            Bitmap.createScaledBitmap(bitmap2, 50, 50, false)  // Scale to 50x50
+
+                        // Add the scaled images to the style
+                        style.addImage("red_marker", scaledBitmap1)
+                        style.addImage("restaurant_icon", scaledBitmap2)
                     }
 
                     val onClickListener = object : OnMapClickListener {
@@ -111,12 +126,7 @@ fun MapScreen(navController: NavController, userId: String?) {
                                 Log.DEBUG,
                                 "Log",
                                 "latitude: " + latitude + "; longitude: " + longitude
-                            );
-                            Log.println(
-                                Log.DEBUG,
-                                "Log",
-                                "restaurants: " + nearbyRestaurants.value
-                            );
+                            )
 
                             val novoMarker = PointAnnotationOptions()
                                 .withPoint(point)
@@ -131,6 +141,20 @@ fun MapScreen(navController: NavController, userId: String?) {
                                 "9a5d8dd32d7c49709e75789d2d28c52d"
                             ) { restaurants ->
                                 nearbyRestaurants.value = restaurants
+
+                                nearbyRestaurants.value.forEach { restaurant ->
+                                    if (restaurant.name != null) {
+
+                                        val restaurantPoint =
+                                            Point.fromLngLat(restaurant.lon, restaurant.lat)
+
+                                        val restaurantMarker = PointAnnotationOptions()
+                                            .withPoint(restaurantPoint)
+                                            .withIconImage("restaurant_icon")
+
+                                        pointAnnotationManager.create(restaurantMarker)
+                                    }
+                                }
                             }
 
                             return true

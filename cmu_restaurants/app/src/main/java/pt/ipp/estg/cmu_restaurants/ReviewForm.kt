@@ -1,16 +1,27 @@
 package pt.ipp.estg.cmu_restaurants
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
@@ -37,10 +48,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
+import androidx.core.content.FileProvider
 import androidx.navigation.NavController
+import coil3.compose.AsyncImage
+import coil3.compose.rememberAsyncImagePainter
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -57,9 +75,9 @@ import pt.ipp.estg.cmu_restaurants.Firebase.getUserById
 import pt.ipp.estg.cmu_restaurants.Models.Restaurant
 import pt.ipp.estg.cmu_restaurants.Models.Review
 import pt.ipp.estg.cmu_restaurants.ui.theme.customAccent
+import java.io.File
 import java.math.BigDecimal
 import java.math.RoundingMode
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,6 +97,44 @@ fun ReviewForm(navController: NavController, restaurantId: String?, context: Con
     var comment by remember { mutableStateOf("") }
     var userId by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
+    var pictureUri by remember { mutableStateOf<Uri?>(null) }
+
+    val tempPhotoUri = remember {
+        FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            File.createTempFile("profile_picture", ".jpg", context.cacheDir)
+        )
+    }
+
+    var hasCameraPermission by remember { mutableStateOf(false) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasCameraPermission = isGranted
+        if (!isGranted) {
+            Toast.makeText(context, "Camera permission is required", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            pictureUri = tempPhotoUri
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionLauncher.launch(Manifest.permission.CAMERA)
+        } else {
+            hasCameraPermission = true
+        }
+    }
 
     LaunchedEffect(restaurantId) {
         coroutineScope.launch {
@@ -117,6 +173,39 @@ fun ReviewForm(navController: NavController, restaurantId: String?, context: Con
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                Button(
+                    onClick = {
+                        cameraLauncher.launch(tempPhotoUri)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                ) {
+                    Text(
+                        text = "Take Picture",
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                pictureUri?.let {
+                    Box(
+                        modifier = Modifier
+                            .size(200.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                    ) {
+                        AsyncImage(
+                            model = it,
+                            contentDescription = "Captured Photo",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(8.dp))
+                        )
+                    }
+                }
+
                 RatingSelector(
                     rating = rating,
                     onRatingChange = { rating = it }
@@ -152,7 +241,8 @@ fun ReviewForm(navController: NavController, restaurantId: String?, context: Con
                             userName = name,
                             restaurantName = restaurant?.restaurantName.toString(),
                             rating = rating,
-                            comment = comment
+                            comment = comment,
+                            picture = pictureUri.toString()
                         )
 
                         saveReview(review, db, context) {
