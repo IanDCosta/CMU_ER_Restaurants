@@ -2,10 +2,8 @@ import Models.Geoapify.GeoapifyPlacesResponse
 import Models.Geoapify.GeoapifyService
 import Models.Geoapify.PlaceProperties
 import android.annotation.SuppressLint
-import android.content.Context
 import android.graphics.BitmapFactory
 import android.util.Log
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -76,7 +74,6 @@ fun MapScreen(navController: NavController, userId: String?) {
                     restaurants = nearbyRestaurants.value,
                     onSelectRestaurant = { restaurant ->
                         findRestaurantByDetails(restaurant, navController)
-                        Log.println(Log.DEBUG, "Log", "Selected restaurant: ${restaurant}")
                     }
                 )
             }
@@ -189,35 +186,37 @@ fun findRestaurantByDetails(
     navController: NavController
 ) = CoroutineScope(Dispatchers.IO).launch {
     val db = FirebaseFirestore.getInstance()
-    var restaurant: Restaurant
-    restaurant = Restaurant()
 
-    db.collection("restaurants")
-        .whereEqualTo("address", place.formatted)
-        .whereEqualTo("lat", place.lat)
-        .whereEqualTo("lon", place.lon)
-        .get()
-        .addOnSuccessListener { querySnapshot ->
-            if (!querySnapshot.isEmpty) {
-                val document = querySnapshot.documents.first()
-                restaurant =
-                    document.toObject(Restaurant::class.java)!!
-            } else {
-                restaurant = Restaurant(
-                    restaurantName = place.name.toString(),
-                    rating = 5.0,
-                    address = place.formatted.toString(),
-                    lat = place.lat,
-                    lon = place.lon,
-                )
-                saveRestaurant(restaurant, db)
-            }
+    try {
+        val querySnapshot = db.collection("restaurants")
+            .whereEqualTo("address", place.formatted)
+            .whereEqualTo("lat", place.lat)
+            .whereEqualTo("lon", place.lon)
+            .get()
+            .await()
+
+        val restaurant = if (!querySnapshot.isEmpty) {
+            querySnapshot.documents.first().toObject(Restaurant::class.java)!!
+        } else {
+            val newRestaurant = Restaurant(
+                restaurantName = place.name.toString(),
+                rating = 5.0,
+                address = place.formatted.toString(),
+                lat = place.lat,
+                lon = place.lon,
+            )
+            saveRestaurant(newRestaurant, db)
+            newRestaurant
         }
-        .addOnFailureListener { exception ->
-            exception.printStackTrace()
+
+        withContext(Dispatchers.Main) {
+            Log.d("Log", "Selected restaurant: $restaurant")
+            navController.navigate("restaurantProfile/${restaurant.restaurantId}")
         }
-    withContext(Dispatchers.Main) {
-        navController.navigate("restaurantProfile/${restaurant.restaurantId}")
+    } catch (exception: Exception) {
+        withContext(Dispatchers.Main) {
+            Log.e("Log", "Error finding restaurant: ${exception.message}")
+        }
     }
 }
 
@@ -268,7 +267,13 @@ fun ButtonBar(
                 onClick = { navController.navigate("reviews/$userId") },
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
             ) {
-                Text(text = "Your Reviews")
+                Text(text = "Reviews")
+            }
+            Button(
+                onClick = { navController.navigate("leaderBoard") },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+            ) {
+                Text(text = "LeaderBoard")
             }
         }
     }
@@ -283,12 +288,12 @@ fun RestaurantSidebar(
         modifier = Modifier
             .width(200.dp)
             .fillMaxHeight()
-            .background(MaterialTheme.colorScheme.background)
+            .background(MaterialTheme.colorScheme.primary)
             .padding(8.dp)
     ) {
         Text(
             "Restaurants",
-            color = MaterialTheme.colorScheme.primary,
+            color = MaterialTheme.colorScheme.background,
             style = MaterialTheme.typography.headlineMedium
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -298,20 +303,19 @@ fun RestaurantSidebar(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(100.dp)
                         .padding(vertical = 8.dp)
                         .background(
                             color = MaterialTheme.colorScheme.secondary,
                             shape = RoundedCornerShape(16.dp)
-                        ),
+                        )
+                        .clickable { onSelectRestaurant(restaurant) },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = restaurantName,
-                        color = MaterialTheme.colorScheme.background,
+                        text = "${restaurant.formatted}",
+                        color = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onSelectRestaurant(restaurant) }
                             .padding(8.dp),
                         style = MaterialTheme.typography.bodyMedium
                     )

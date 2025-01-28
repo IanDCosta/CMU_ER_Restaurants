@@ -44,6 +44,8 @@ android {
         jvmTarget = "1.8"
     }
     buildFeatures {
+        viewBinding = true
+        dataBinding = true
         compose = true
     }
     composeOptions {
@@ -57,8 +59,11 @@ android {
 }
 
 dependencies {
+    implementation(libs.play.services.location)
+    implementation(libs.play.services.maps)
     val nav_version = "2.8.5"
     val room_version = "2.6.1"
+    val camerax_version = "1.2.2"
 
     //firebase
     implementation(platform("com.google.firebase:firebase-bom:33.8.0"))
@@ -84,6 +89,15 @@ dependencies {
     implementation("com.mapbox.maps:android:11.9.1")
     implementation("com.mapbox.extension:maps-compose:11.9.1")
 
+    //cameraX
+    implementation("androidx.camera:camera-core:${camerax_version}")
+    implementation("androidx.camera:camera-camera2:${camerax_version}")
+    implementation("androidx.camera:camera-lifecycle:${camerax_version}")
+    implementation("androidx.camera:camera-video:${camerax_version}")
+    implementation("androidx.camera:camera-view:${camerax_version}")
+    implementation("androidx.camera:camera-extensions:${camerax_version}")
+
+    //
     implementation("androidx.compose.material:material-icons-extended:1.5.1")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

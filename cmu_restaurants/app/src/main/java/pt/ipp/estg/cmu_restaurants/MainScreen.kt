@@ -1,9 +1,4 @@
-import android.Manifest
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.content.Context
 import androidx.compose.foundation.clickable
-import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -18,15 +13,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import pt.ipp.estg.cmu_restaurants.Firebase.AuthViewModel
+import pt.ipp.estg.cmu_restaurants.LeaderBoard
 import pt.ipp.estg.cmu_restaurants.RestaurantProfile
 import pt.ipp.estg.cmu_restaurants.ReviewForm
 import pt.ipp.estg.cmu_restaurants.UserForm
@@ -41,6 +34,7 @@ fun MainScreen() {
     NavHost(navController = navController, startDestination = "login") {
         composable("login") { LoginScreen(navController) }
         composable("userForm") { UserForm(navController, context) }
+        composable("leaderBoard") { LeaderBoard(navController) }
         composable("map/{userId}") { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId")
             MapScreen(navController = navController, userId = userId)
@@ -49,9 +43,9 @@ fun MainScreen() {
             val userId = backStackEntry.arguments?.getString("userId")
             UserProfile(userId = userId)
         }
-        composable("reviewForm/{restaurantName}") { backStackEntry ->
-            val restaurantName = backStackEntry.arguments?.getString("restaurantName")
-            ReviewForm(navController = navController, restaurantName = restaurantName, context)
+        composable("reviewForm/{restaurantId}") { backStackEntry ->
+            val restaurantId = backStackEntry.arguments?.getString("restaurantId")
+            ReviewForm(navController = navController, restaurantId = restaurantId, context)
         }
         composable("restaurantProfile/{restaurantId}") { backStackEntry ->
             val restaurantId = backStackEntry.arguments?.getString("restaurantId")
@@ -146,7 +140,6 @@ fun LoginScreen(navController: NavController) {
                     authViewModel.login(email, password) { success, userId ->
                         if (success) {
                             navController.navigate("map/$userId")
-                            showNotification(context, "Login Successful")
                         } else {
                             Toast.makeText(
                                 context,
@@ -197,46 +190,6 @@ fun LoginScreen(navController: NavController) {
                 fontSize = 12.sp
             )
         }
-    }
-}
-
-fun showNotification(context: Context, message: String) {
-    val channelId = "login_channel"
-    val channelName = "Login Notifications"
-    val notificationId = 1
-
-    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-        val channel = NotificationChannel(
-            channelId,
-            channelName,
-            NotificationManager.IMPORTANCE_DEFAULT
-        ).apply {
-            description = "Notifications for logins"
-        }
-        val notificationManager: NotificationManager =
-            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.createNotificationChannel(channel)
-    }
-
-    // Criar a notificação
-    val notification = NotificationCompat.Builder(context, channelId)
-        .setSmallIcon(android.R.drawable.checkbox_on_background)
-        .setContentTitle("Login")
-        .setContentText(message)
-        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-        .setAutoCancel(true)
-        .build()
-
-    // Exibir a notificação
-    with(NotificationManagerCompat.from(context)) {
-        if (ActivityCompat.checkSelfPermission(
-                context,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            return
-        }
-        notify(notificationId, notification)
     }
 }
 

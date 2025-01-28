@@ -1,8 +1,10 @@
 package pt.ipp.estg.cmu_restaurants.Firebase
 
 import android.content.ContentValues.TAG
+import android.net.Uri
 import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.tasks.await
@@ -55,22 +57,40 @@ suspend fun getReviewsByUserIdFromFirestore(userId: String?): List<Review> {
         snapshot.documents.mapNotNull { it.toObject(Review::class.java) }
     } catch (e: Exception) {
         e.printStackTrace()
+        Log.println(Log.DEBUG, "Log", e.message.toString())
         emptyList()
     }
 }
 
-suspend fun getReviewsByRestaurantNameFromFirestore(restaurantName: String): List<Review> {
+suspend fun getReviewsByRestaurantIdFromFirestore(restaurantId: String): List<Review> {
     val db = FirebaseFirestore.getInstance()
     val reviewsCollection = db.collection("reviews")
     return try {
         val snapshot = reviewsCollection
-            .whereEqualTo("restaurantName", restaurantName)
+            .whereEqualTo("restaurantId", restaurantId)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .limit(50)
             .get()
             .await()
         snapshot.documents.mapNotNull { it.toObject(Review::class.java) }
     } catch (e: Exception) {
         e.printStackTrace()
+        Log.println(Log.DEBUG, "Log", e.message.toString())
         emptyList()
     }
 }
 
+suspend fun getAllRestaurants(): List<Restaurant> {
+    val db = FirebaseFirestore.getInstance()
+    val restaurantsCollection = db.collection("restaurants")
+    return try {
+        val snapshot = restaurantsCollection
+            .orderBy("rating", Query.Direction.DESCENDING)
+            .get()
+            .await()
+        snapshot.documents.mapNotNull { it.toObject(Restaurant::class.java) }
+    } catch (e: Exception) {
+        e.printStackTrace()
+        emptyList()
+    }
+}

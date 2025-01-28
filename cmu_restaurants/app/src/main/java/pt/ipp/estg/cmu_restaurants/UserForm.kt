@@ -17,6 +17,7 @@ import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
 import android.util.Log
+import androidx.core.text.isDigitsOnly
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
@@ -48,11 +49,12 @@ fun UserForm(navController: NavController, context: Context) {
 
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var phoneNumber by remember { mutableStateOf(0) }
+    var phoneNumber by remember { mutableStateOf("") }
+    val numericRegex = Regex("[^0-9]")
     var password by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
 
-    var phoneError by remember { mutableStateOf(false) }
+    val maxLength = 50
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -74,7 +76,11 @@ fun UserForm(navController: NavController, context: Context) {
             ) {
                 OutlinedTextField(
                     value = name,
-                    onValueChange = { name = it },
+                    onValueChange = {
+                        if (it.length <= maxLength) {
+                            name = it.replace("\n", "").replace("\r", "")
+                        }
+                    },
                     label = { Text("Name", color = MaterialTheme.colorScheme.customAccent) },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -84,7 +90,11 @@ fun UserForm(navController: NavController, context: Context) {
 
                 OutlinedTextField(
                     value = email,
-                    onValueChange = { email = it },
+                    onValueChange = {
+                        if (it.length <= maxLength) {
+                            email = it.replace("\n", "").replace("\r", "")
+                        }
+                    },
                     label = { Text("Email", color = MaterialTheme.colorScheme.customAccent) },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -94,16 +104,22 @@ fun UserForm(navController: NavController, context: Context) {
                 )
 
                 OutlinedTextField(
-                    value = phoneNumber.toString(),
+                    value = phoneNumber,
                     onValueChange = {
-                        if (it.all { char -> char.isDigit() }) {
-                            phoneNumber = it.toInt()
-                            phoneError = false
+                        val stripped =
+                            numericRegex.replace(it.replace("\n", "").replace("\r", ""), "")
+                        phoneNumber = if (stripped.length >= 10) {
+                            stripped.substring(0..9)
                         } else {
-                            phoneError = true
+                            stripped
                         }
                     },
-                    label = { Text("Phone Number", color = MaterialTheme.colorScheme.customAccent) },
+                    label = {
+                        Text(
+                            "Phone Number",
+                            color = MaterialTheme.colorScheme.customAccent
+                        )
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp),
@@ -113,7 +129,11 @@ fun UserForm(navController: NavController, context: Context) {
 
                 OutlinedTextField(
                     value = password,
-                    onValueChange = { password = it },
+                    onValueChange = {
+                        if (it.length <= maxLength) {
+                            password = it.replace("\n", "").replace("\r", "")
+                        }
+                    },
                     label = { Text("Password", color = MaterialTheme.colorScheme.customAccent) },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -126,10 +146,19 @@ fun UserForm(navController: NavController, context: Context) {
 
                 Button(
                     onClick = {
-                        if (name.isEmpty() || email.isEmpty() || phoneNumber.toString()
-                                .isEmpty() || password.isEmpty()
+                        if (name.isEmpty() || email.isEmpty() || phoneNumber.isEmpty() || password.isEmpty()
                         ) {
                             Toast.makeText(context, "All fields are required.", Toast.LENGTH_SHORT)
+                                .show()
+                            return@Button
+                        }
+
+                        if (!phoneNumber.isDigitsOnly() && phoneNumber.length > 9) {
+                            Toast.makeText(
+                                context,
+                                "Phone Number must only contain digits",
+                                Toast.LENGTH_SHORT
+                            )
                                 .show()
                             return@Button
                         }
@@ -250,10 +279,10 @@ fun saveUserRoomDB(user: User, context: Context) {
         throw IllegalStateException("Email already in use.")
     }
 
-    val existingUserByPhone = getUserByPhoneNumber(context, user.phoneNumber)
+    /*val existingUserByPhone = getUserByPhoneNumber(context, user.phoneNumber)
     if (existingUserByPhone != null) {
         throw IllegalStateException("Phone number already in use.")
-    }
+    }*/
 
     insertUser(context, user)
 }

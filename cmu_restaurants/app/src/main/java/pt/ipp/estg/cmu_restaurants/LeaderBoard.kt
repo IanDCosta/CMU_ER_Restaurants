@@ -1,6 +1,5 @@
 package pt.ipp.estg.cmu_restaurants
 
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -28,25 +27,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
-import pt.ipp.estg.cmu_restaurants.Firebase.getReviewsByUserIdFromFirestore
-import pt.ipp.estg.cmu_restaurants.Models.Review
+import pt.ipp.estg.cmu_restaurants.Firebase.getAllRestaurants
+import pt.ipp.estg.cmu_restaurants.Models.Restaurant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UserReviews(navController: NavController, userId: String?) {
-    val context = LocalContext.current
-    val reviews = remember { mutableStateListOf<Review>() }
+fun LeaderBoard(navController: NavController) {
+    var restaurants = remember { mutableStateListOf<Restaurant>() }
     val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(userId) {
+    LaunchedEffect(Unit) {
         coroutineScope.launch {
-            val userReviews = getReviewsByUserIdFromFirestore(userId)
-            Log.println(Log.DEBUG, "Log", userReviews.toString())
-            reviews.addAll(userReviews)
+            val fetchedRestaurants = getAllRestaurants()
+            restaurants.addAll(fetchedRestaurants)
         }
     }
 
@@ -68,11 +64,11 @@ fun UserReviews(navController: NavController, userId: String?) {
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            if (reviews.isEmpty()) {
-                Text("No reviews found.")
+            if (restaurants.isEmpty()) {
+                Text("No Restaurants with reviews found")
             } else {
                 LazyColumn {
-                    items(reviews) { review ->
+                    items(restaurants) { restaurant ->
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -81,14 +77,14 @@ fun UserReviews(navController: NavController, userId: String?) {
                                 .background(
                                     color = MaterialTheme.colorScheme.secondary,
                                     shape = RoundedCornerShape(16.dp)
-                                ),
+                                )
+                                .clickable { navController.navigate("restaurantProfile/${restaurant.restaurantId}") },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "Restaurant: ${review.restaurantName}\n" +
-                                        "Rating: ${(review.rating).toInt()}/5\n" +
-                                        "Comment: ${review.comment}",
-                                color = MaterialTheme.colorScheme.background,
+                                text = "${restaurant.restaurantName}\n" +
+                                        "${restaurant.rating}/5",
+                                color = MaterialTheme.colorScheme.onPrimary,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(8.dp),

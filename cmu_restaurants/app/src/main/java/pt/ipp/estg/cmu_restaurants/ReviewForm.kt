@@ -1,6 +1,5 @@
 package pt.ipp.estg.cmu_restaurants
 
-import Models.Geoapify.PlaceProperties
 import android.content.Context
 import android.util.Log
 import android.widget.Toast
@@ -28,9 +27,13 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +42,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -47,14 +51,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import pt.ipp.estg.cmu_restaurants.Firebase.getRestaurantById
+import pt.ipp.estg.cmu_restaurants.Firebase.getReviewsByRestaurantIdFromFirestore
+import pt.ipp.estg.cmu_restaurants.Firebase.getUserById
+import pt.ipp.estg.cmu_restaurants.Models.Restaurant
 import pt.ipp.estg.cmu_restaurants.Models.Review
 import pt.ipp.estg.cmu_restaurants.ui.theme.customAccent
-import pt.ipp.estg.cmu_restaurants.ui.theme.customBackground
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReviewForm(navController: NavController, restaurantName: String?, context: Context) {
+fun ReviewForm(navController: NavController, restaurantId: String?, context: Context) {
     val colors = TextFieldDefaults.outlinedTextFieldColors(
         focusedLabelColor = MaterialTheme.colorScheme.primary,
         unfocusedLabelColor = MaterialTheme.colorScheme.secondary,
@@ -62,10 +71,33 @@ fun ReviewForm(navController: NavController, restaurantName: String?, context: C
         unfocusedBorderColor = MaterialTheme.colorScheme.secondary,
     )
 
-    var rating by remember { mutableStateOf(0) }
+    val db = Firebase.firestore
+    val coroutineScope = rememberCoroutineScope()
+    var restaurant by remember { mutableStateOf<Restaurant?>(null) }
+    val reviews = remember { mutableStateListOf<Review>() }
+    var rating by remember { mutableDoubleStateOf(0.0) }
     var comment by remember { mutableStateOf("") }
+    var userId by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf("") }
 
-    var ratingError by remember { mutableStateOf(false) }
+    LaunchedEffect(restaurantId) {
+        coroutineScope.launch {
+            getRestaurantById(restaurantId.toString()) { fetchedRestaurant ->
+                restaurant = fetchedRestaurant
+            }
+            val restaurantReviews =
+                getReviewsByRestaurantIdFromFirestore(restaurantId.toString())
+            reviews.addAll(restaurantReviews)
+
+            val newUser = FirebaseAuth.getInstance().currentUser
+            userId = newUser?.uid
+                ?: throw IllegalStateException("User not authenticated")
+
+            getUserById(userId) { fetchedUser ->
+                name = fetchedUser.name
+            }
+        }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -114,22 +146,38 @@ fun ReviewForm(navController: NavController, restaurantName: String?, context: C
                             return@Button
                         }
 
-                        val db = Firebase.firestore
-
-                        val newUser = FirebaseAuth.getInstance().currentUser
-                        val uid = newUser?.uid
-                            ?: throw IllegalStateException("User not authenticated")
-
                         val review = Review(
-                            userId = uid,
-                            restaurantId = "",
-                            userName = newUser.displayName.toString(),
-                            restaurantName = restaurantName.toString(),
+                            userId = userId,
+                            restaurantId = restaurantId.toString(),
+                            userName = name,
+                            restaurantName = restaurant?.restaurantName.toString(),
                             rating = rating,
                             comment = comment
                         )
 
                         saveReview(review, db, context) {
+                            reviews.add(review)
+
+                            val updatedRestaurant = Restaurant(
+                                restaurantId = restaurantId.toString(),
+                                restaurantName = restaurant?.restaurantName.toString(),
+                                rating = CalculateTotalRating(reviews),
+                                address = restaurant?.address.toString(),
+                                lat = restaurant?.lat ?: 0.0,
+                                lon = restaurant?.lon ?: 0.0
+                            )
+
+                            updateRestaurant(
+                                restaurantId.toString(),
+                                updatedRestaurant
+                            ) { success ->
+                                if (success) {
+                                    Log.d("UpdateRestaurant", "Restaurant updated successfully!")
+                                } else {
+                                    Log.e("UpdateRestaurant", "Failed to update restaurant.")
+                                }
+                            }
+
                             navController.popBackStack()
                         }
                     },
@@ -147,8 +195,8 @@ fun ReviewForm(navController: NavController, restaurantName: String?, context: C
 
 @Composable
 fun RatingSelector(
-    rating: Int,
-    onRatingChange: (Int) -> Unit
+    rating: Double,
+    onRatingChange: (Double) -> Unit
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -161,12 +209,11 @@ fun RatingSelector(
                 tint = if (i <= rating) MaterialTheme.colorScheme.primary else Color.Gray,
                 modifier = Modifier
                     .size(32.dp)
-                    .clickable { onRatingChange(i) }
+                    .clickable { onRatingChange(i.toDouble()) }
             )
         }
     }
 }
-
 
 fun saveReview(review: Review, db: FirebaseFirestore, context: Context, onSuccess: () -> Unit) =
     CoroutineScope(Dispatchers.IO).launch {
@@ -178,7 +225,8 @@ fun saveReview(review: Review, db: FirebaseFirestore, context: Context, onSucces
                 "restaurantName" to review.restaurantName,
                 "rating" to review.rating,
                 "comment" to review.comment,
-                "picture" to review.picture
+                "picture" to review.picture,
+                "timestamp" to FieldValue.serverTimestamp()
             )
 
             db.collection("reviews").document(review.reviewId).set(reviewData).await()
@@ -195,3 +243,39 @@ fun saveReview(review: Review, db: FirebaseFirestore, context: Context, onSucces
             }
         }
     }
+
+fun updateRestaurant(
+    restaurantId: String,
+    updatedRestaurant: Restaurant,
+    onResult: (Boolean) -> Unit
+) {
+    val db = FirebaseFirestore.getInstance()
+
+    val updatedData = mapOf(
+        "restaurantName" to updatedRestaurant.restaurantName,
+        "rating" to updatedRestaurant.rating,
+        "address" to updatedRestaurant.address,
+        "lat" to updatedRestaurant.lat,
+        "lon" to updatedRestaurant.lon
+    )
+
+    db.collection("restaurants")
+        .document(restaurantId)
+        .update(updatedData)
+        .addOnSuccessListener {
+            onResult(true)
+        }
+        .addOnFailureListener { exception ->
+            exception.printStackTrace()
+            onResult(false)
+        }
+}
+
+fun CalculateTotalRating(reviews: List<Review>): Double {
+    if (reviews.isEmpty()) {
+        return 5.0
+    }
+
+    val totalRating = reviews.sumOf { it.rating }
+    return BigDecimal(totalRating / reviews.size).setScale(2, RoundingMode.HALF_UP).toDouble()
+}

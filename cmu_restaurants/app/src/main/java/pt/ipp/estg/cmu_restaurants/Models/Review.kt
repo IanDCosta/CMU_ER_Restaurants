@@ -24,7 +24,9 @@ data class Review(
     val restaurantId: String,
     val userName: String,
     val restaurantName: String,
-    val rating: Int,
+    val rating: Double,
     val comment: String,
     val picture: String? = "null"
-)
+){
+    constructor() : this("","","","","",0.0,"",null)
+}

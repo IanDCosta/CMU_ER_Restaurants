@@ -8,9 +8,9 @@ data class User(
     @PrimaryKey val userId: String,
     val name: String,
     val email: String,
-    val phoneNumber: Int,
+    val phoneNumber: String,
     val password: String,
     val profilePicture: String? = "null"
 ){
-    constructor() : this("","","",0,"",null)
+    constructor() : this("","","","","",null)
 }
